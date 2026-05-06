@@ -1,212 +1,739 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Advanced Bouncing Logo</title>
+    <!-- ============================================================
+         META & TITLE
+         ============================================================ -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Advanced Bouncing Logo Experience</title>
 
-<style>
-    /* ------------------------------
-       GLOBAL PAGE STYLES
-       ------------------------------ */
-    html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: black;
-        font-family: Arial, sans-serif;
-        user-select: none;
-    }
-
-    /* ------------------------------
-       BOUNCING LOGO IMAGE
-       ------------------------------ */
-    #bouncingLogo {
-        position: absolute;
-        width: 160px;
-        height: auto;
-        pointer-events: none;
-        transition: transform 0.15s ease-out;
-    }
-
-    /* ------------------------------
-       CONTROL PANEL
-       ------------------------------ */
-    #controlPanel {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        background: rgba(0,0,0,0.6);
-        padding: 12px 16px;
-        border-radius: 8px;
-        color: white;
-        font-size: 14px;
-        z-index: 9999;
-        backdrop-filter: blur(4px);
-    }
-
-    #controlPanel label {
-        cursor: pointer;
-    }
-
-    #fpsCounter {
-        margin-top: 6px;
-        font-size: 12px;
-        opacity: 0.8;
-    }
-</style>
-
-</head>
-<body>
-
-<!-- --------------------------------
-     CONTROL PANEL UI
-     -------------------------------- -->
-<div id="controlPanel">
-    <label>
-        <input type="checkbox" id="cornerToggle">
-        Enable 50% Corner Snap
-    </label>
-    <div id="fpsCounter">FPS: --</div>
-</div>
-
-<!-- --------------------------------
-     LOGO IMAGE
-     -------------------------------- -->
-<img src="logo.png" id="bouncingLogo" alt="Logo">
-
-<script>
-/* ============================================================
-   ADVANCED BOUNCING LOGO ENGINE
-   ============================================================ */
-
-const logo = document.getElementById("bouncingLogo");
-const cornerToggle = document.getElementById("cornerToggle");
-const fpsCounter = document.getElementById("fpsCounter");
-
-/* ------------------------------
-   INITIAL POSITION & SPEED
-   ------------------------------ */
-let posX = 100;
-let posY = 100;
-
-let speedX = (Math.random() * 3 + 2) * (Math.random() < 0.5 ? -1 : 1);
-let speedY = (Math.random() * 3 + 2) * (Math.random() < 0.5 ? -1 : 1);
-
-let lastFrameTime = performance.now();
-let frameCount = 0;
-let fps = 0;
-
-/* ------------------------------
-   BACKGROUND COLOR CYCLING
-   ------------------------------ */
-let hue = 0;
-function cycleBackground() {
-    hue = (hue + 0.15) % 360;
-    document.body.style.backgroundColor = `hsl(${hue}, 40%, 10%)`;
-}
-
-/* ------------------------------
-   CORNER SNAP LOGIC (50% chance)
-   ------------------------------ */
-function maybeSnapToCorner() {
-    if (!cornerToggle.checked) return;
-
-    if (Math.random() < 0.5) {
-        const corner = Math.floor(Math.random() * 4);
-
-        switch (corner) {
-            case 0: posX = 0; posY = 0; break;
-            case 1: posX = window.innerWidth - logo.width; posY = 0; break;
-            case 2: posX = 0; posY = window.innerHeight - logo.height; break;
-            case 3: posX = window.innerWidth - logo.width; posY = window.innerHeight - logo.height; break;
+    <!-- ============================================================
+         GLOBAL STYLES
+         ============================================================ -->
+    <style>
+        /* ------------------------------------------------------------
+           RESET & BASE
+           ------------------------------------------------------------ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        logo.style.transform = "scale(1.15)";
-        setTimeout(() => logo.style.transform = "scale(1)", 150);
-    }
-}
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #111;
+            color: #f5f5f5;
+            user-select: none;
+            cursor: default;
+        }
 
-/* ------------------------------
-   MAIN ANIMATION LOOP
-   ------------------------------ */
-function animate() {
-    const now = performance.now();
-    const delta = now - lastFrameTime;
-    frameCount++;
+        body {
+            /* The background will be animated via JS using HSL gradients */
+            background-repeat: no-repeat;
+            background-size: cover;
+            transition: background 0.4s ease-out;
+        }
 
-    if (delta >= 1000) {
-        fps = frameCount;
-        frameCount = 0;
-        lastFrameTime = now;
-        fpsCounter.textContent = "FPS: " + fps;
-    }
+        /* ------------------------------------------------------------
+           BOUNCING LOGO
+           ------------------------------------------------------------ */
+        #bouncingLogo {
+            position: absolute;
+            width: 160px;
+            height: auto;
+            pointer-events: none;
+            will-change: transform, left, top;
+            transition: transform 0.15s ease-out;
+            filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.4));
+        }
 
-    cycleBackground();
+        /* ------------------------------------------------------------
+           HIDDEN CONTROL PANEL (MACOS-LIKE AUTO-HIDE DOCK)
+           ------------------------------------------------------------ */
+        #controlPanelWrapper {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: -120px; /* hidden by default, slide up when active */
+            display: flex;
+            justify-content: center;
+            pointer-events: none; /* only inner panel will receive events when visible */
+            z-index: 9999;
+            transition: bottom 0.25s ease-out;
+        }
 
-    posX += speedX;
-    posY += speedY;
+        #controlPanel {
+            pointer-events: auto;
+            min-width: 260px;
+            max-width: 420px;
+            padding: 14px 18px;
+            border-radius: 14px 14px 0 0;
+            background: rgba(10, 10, 10, 0.85);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow:
+                0 -8px 20px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(14px);
+            color: #f5f5f5;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-    const maxX = window.innerWidth - logo.width;
-    const maxY = window.innerHeight - logo.height;
+        #controlPanelHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
 
-    let bounced = false;
+        #controlPanelTitle {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #e5e5e5;
+        }
 
-    if (posX <= 0 || posX >= maxX) {
-        speedX *= -1;
-        bounced = true;
-    }
-    if (posY <= 0 || posY >= maxY) {
-        speedY *= -1;
-        bounced = true;
-    }
+        #controlPanelHint {
+            font-size: 11px;
+            opacity: 0.7;
+        }
 
-    if (bounced) {
-        maybeSnapToCorner();
-    }
+        #controlPanel label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-    logo.style.left = posX + "px";
-    logo.style.top = posY + "px";
+        #controlPanel input[type="checkbox"] {
+            accent-color: #4cafef;
+            cursor: pointer;
+        }
 
-    requestAnimationFrame(animate);
-}
+        #fpsCounter {
+            margin-top: 4px;
+            font-size: 11px;
+            opacity: 0.8;
+        }
 
-/* ------------------------------
-   WINDOW RESIZE HANDLING
-   ------------------------------ */
-window.addEventListener("resize", () => {
-    posX = Math.min(posX, window.innerWidth - logo.width);
-    posY = Math.min(posY, window.innerHeight - logo.height);
-});
+        #infoRow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            font-size: 11px;
+            opacity: 0.8;
+        }
 
-/* ------------------------------
-   TOUCH DRAGGING (MOBILE)
-   ------------------------------ */
-let dragging = false;
+        .info-pill {
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
 
-logo.addEventListener("touchstart", (e) => {
-    dragging = true;
-});
+        /* ------------------------------------------------------------
+           RANGE SLIDERS & CONTROLS
+           ------------------------------------------------------------ */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
+        }
 
-window.addEventListener("touchmove", (e) => {
-    if (!dragging) return;
-    const touch = e.touches[0];
-    posX = touch.clientX - logo.width / 2;
-    posY = touch.clientY - logo.height / 2;
-});
+        .control-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            opacity: 0.85;
+        }
 
-window.addEventListener("touchend", () => {
-    dragging = false;
-});
+        .control-label-row span.value {
+            opacity: 0.9;
+            font-variant-numeric: tabular-nums;
+        }
 
-/* ------------------------------
-   START WHEN IMAGE LOADS
-   ------------------------------ */
-logo.onload = () => {
-    animate();
-};
+        .control-slider {
+            width: 100%;
+        }
 
-</script>
+        input[type="range"].control-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            outline: none;
+        }
 
+        input[type="range"].control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4cafef;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 0 3px rgba(76, 175, 239, 0.25);
+            cursor: pointer;
+        }
+
+        input[type="range"].control-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4cafef;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 0 3px rgba(76, 175, 239, 0.25);
+            cursor: pointer;
+        }
+
+        /* ------------------------------------------------------------
+           SMALL STATUS DOT
+           ------------------------------------------------------------ */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.25);
+        }
+
+        /* ------------------------------------------------------------
+           HINT BAR AT BOTTOM (SUBTLE)
+           ------------------------------------------------------------ */
+        #bottomHint {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 4px;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+            z-index: 9998;
+        }
+
+        /* ------------------------------------------------------------
+           MOBILE ADJUSTMENTS
+           ------------------------------------------------------------ */
+        @media (max-width: 600px) {
+            #controlPanel {
+                min-width: 220px;
+                max-width: 90%;
+                padding: 12px 14px;
+            }
+
+            #bottomHint {
+                font-size: 9px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ============================================================
+         BOTTOM HINT (SUBTLE)
+         ============================================================ -->
+    <div id="bottomHint">
+        Move mouse to bottom edge to reveal controls
+    </div>
+
+    <!-- ============================================================
+         CONTROL PANEL WRAPPER (AUTO-HIDE DOCK STYLE)
+         ============================================================ -->
+    <div id="controlPanelWrapper">
+        <div id="controlPanel">
+            <div id="controlPanelHeader">
+                <div id="controlPanelTitle">
+                    Bouncing Logo Controls
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="status-dot" id="statusDot"></div>
+                    <div id="controlPanelHint">Auto-hide when mouse leaves bottom edge</div>
+                </div>
+            </div>
+
+            <label>
+                <input type="checkbox" id="cornerToggle">
+                <span>Enable 50% Corner Snap on Wall Hit</span>
+            </label>
+
+            <div id="infoRow">
+                <div class="info-pill" id="infoSpeed">
+                    Speed: <span id="infoSpeedValue">--</span>
+                </div>
+                <div class="info-pill" id="infoDirection">
+                    Direction: <span id="infoDirectionValue">--</span>
+                </div>
+                <div class="info-pill" id="infoMode">
+                    Mode: <span id="infoModeValue">Normal</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <span>Base Speed</span>
+                    <span class="value" id="speedSliderValue">1.00x</span>
+                </div>
+                <input
+                    type="range"
+                    min="0.3"
+                    max="3"
+                    step="0.1"
+                    value="1"
+                    id="speedSlider"
+                    class="control-slider"
+                >
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <span>Logo Size</span>
+                    <span class="value" id="sizeSliderValue">160px</span>
+                </div>
+                <input
+                    type="range"
+                    min="80"
+                    max="260"
+                    step="5"
+                    value="160"
+                    id="sizeSlider"
+                    class="control-slider"
+                >
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <span>Background Speed</span>
+                    <span class="value" id="bgSpeedSliderValue">1.00x</span>
+                </div>
+                <input
+                    type="range"
+                    min="0.2"
+                    max="3"
+                    step="0.1"
+                    value="1"
+                    id="bgSpeedSlider"
+                    class="control-slider"
+                >
+            </div>
+
+            <div class="control-group">
+                <div class="control-label-row">
+                    <span>Background Softness</span>
+                    <span class="value" id="bgSoftnessSliderValue">0.60</span>
+                </div>
+                <input
+                    type="range"
+                    min="0.2"
+                    max="1"
+                    step="0.05"
+                    value="0.6"
+                    id="bgSoftnessSlider"
+                    class="control-slider"
+                >
+            </div>
+
+            <div id="fpsCounter">FPS: --</div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         BOUNCING LOGO IMAGE
+         ============================================================ -->
+    <img src="logo.png" id="bouncingLogo" alt="Logo">
+
+    <!-- ============================================================
+         SCRIPT SECTION
+         ============================================================ -->
+    <script>
+        // ------------------------------------------------------------
+        // ELEMENT REFERENCES
+        // ------------------------------------------------------------
+        const logo = document.getElementById("bouncingLogo");
+        const controlPanelWrapper = document.getElementById("controlPanelWrapper");
+        const cornerToggle = document.getElementById("cornerToggle");
+        const fpsCounter = document.getElementById("fpsCounter");
+        const statusDot = document.getElementById("statusDot");
+
+        const speedSlider = document.getElementById("speedSlider");
+        const speedSliderValue = document.getElementById("speedSliderValue");
+
+        const sizeSlider = document.getElementById("sizeSlider");
+        const sizeSliderValue = document.getElementById("sizeSliderValue");
+
+        const bgSpeedSlider = document.getElementById("bgSpeedSlider");
+        const bgSpeedSliderValue = document.getElementById("bgSpeedSliderValue");
+
+        const bgSoftnessSlider = document.getElementById("bgSoftnessSlider");
+        const bgSoftnessSliderValue = document.getElementById("bgSoftnessSliderValue");
+
+        const infoSpeedValue = document.getElementById("infoSpeedValue");
+        const infoDirectionValue = document.getElementById("infoDirectionValue");
+        const infoModeValue = document.getElementById("infoModeValue");
+
+        const bottomHint = document.getElementById("bottomHint");
+
+        // ------------------------------------------------------------
+        // STATE VARIABLES
+        // ------------------------------------------------------------
+        let posX = 120;
+        let posY = 120;
+
+        let baseSpeedX = (Math.random() * 3 + 2) * (Math.random() < 0.5 ? -1 : 1);
+        let baseSpeedY = (Math.random() * 3 + 2) * (Math.random() < 0.5 ? -1 : 1);
+
+        let speedMultiplier = parseFloat(speedSlider.value);
+        let bgSpeedMultiplier = parseFloat(bgSpeedSlider.value);
+        let bgSoftness = parseFloat(bgSoftnessSlider.value);
+
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        let hueBase = 200;
+        let hueOffset = 0;
+        let gradientPhase = 0;
+
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        let panelVisible = false;
+        let panelHideTimeout = null;
+
+        let lastMouseY = null;
+        let lastMouseMoveTime = performance.now();
+
+        // ------------------------------------------------------------
+        // UTILITY FUNCTIONS
+        // ------------------------------------------------------------
+        function clamp(value, min, max) {
+            return Math.min(max, Math.max(min, value));
+        }
+
+        function updateSpeedInfo() {
+            const vx = baseSpeedX * speedMultiplier;
+            const vy = baseSpeedY * speedMultiplier;
+            const magnitude = Math.sqrt(vx * vx + vy * vy);
+            infoSpeedValue.textContent = magnitude.toFixed(2) + " px/frame";
+
+            const angle = Math.atan2(vy, vx) * (180 / Math.PI);
+            const normalizedAngle = (angle + 360) % 360;
+            infoDirectionValue.textContent = normalizedAngle.toFixed(1) + "°";
+        }
+
+        function updateModeInfo() {
+            infoModeValue.textContent = cornerToggle.checked ? "Corner Snap 50%" : "Normal";
+        }
+
+        function setPanelVisible(visible) {
+            if (visible === panelVisible) return;
+            panelVisible = visible;
+
+            if (visible) {
+                controlPanelWrapper.style.bottom = "0px";
+                statusDot.style.background = "#4caf50";
+                statusDot.style.boxShadow = "0 0 0 4px rgba(76, 175, 80, 0.25)";
+            } else {
+                controlPanelWrapper.style.bottom = "-120px";
+                statusDot.style.background = "#888";
+                statusDot.style.boxShadow = "0 0 0 4px rgba(136, 136, 136, 0.25)";
+            }
+        }
+
+        function schedulePanelHide() {
+            if (panelHideTimeout) {
+                clearTimeout(panelHideTimeout);
+            }
+            panelHideTimeout = setTimeout(() => {
+                setPanelVisible(false);
+            }, 1200);
+        }
+
+        // ------------------------------------------------------------
+        // BACKGROUND GRADIENT (LIGHT RAINBOW USING HSL)
+        // ------------------------------------------------------------
+        function updateBackgroundGradient(deltaTime) {
+            const deltaSeconds = deltaTime / 1000;
+            const speedFactor = bgSpeedMultiplier;
+
+            gradientPhase += deltaSeconds * 0.25 * speedFactor;
+            hueOffset = (hueOffset + deltaSeconds * 20 * speedFactor) % 360;
+
+            const phase = gradientPhase;
+
+            const hue1 = (hueBase + hueOffset) % 360;
+            const hue2 = (hueBase + hueOffset + 60 + 40 * Math.sin(phase * 1.3)) % 360;
+            const hue3 = (hueBase + hueOffset + 180 + 60 * Math.cos(phase * 0.9)) % 360;
+
+            const lightnessBase = 80;
+            const lightnessVariation = 10 * bgSoftness;
+
+            const l1 = clamp(lightnessBase + lightnessVariation * Math.sin(phase), 65, 90);
+            const l2 = clamp(lightnessBase + lightnessVariation * Math.cos(phase * 1.2), 65, 90);
+            const l3 = clamp(lightnessBase + lightnessVariation * Math.sin(phase * 0.7 + 1.5), 65, 90);
+
+            const saturationBase = 45;
+            const saturationVariation = 10 * bgSoftness;
+
+            const s1 = clamp(saturationBase + saturationVariation * Math.sin(phase * 0.8), 30, 60);
+            const s2 = clamp(saturationBase + saturationVariation * Math.cos(phase * 1.1), 30, 60);
+            const s3 = clamp(saturationBase + saturationVariation * Math.sin(phase * 1.4 + 0.7), 30, 60);
+
+            const color1 = `hsl(${hue1.toFixed(1)}, ${s1.toFixed(1)}%, ${l1.toFixed(1)}%)`;
+            const color2 = `hsl(${hue2.toFixed(1)}, ${s2.toFixed(1)}%, ${l2.toFixed(1)}%)`;
+            const color3 = `hsl(${hue3.toFixed(1)}, ${s3.toFixed(1)}%, ${l3.toFixed(1)}%)`;
+
+            const angle = (phase * 40) % 360;
+
+            document.body.style.backgroundImage =
+                `linear-gradient(${angle.toFixed(1)}deg, ${color1}, ${color2}, ${color3})`;
+        }
+
+        // ------------------------------------------------------------
+        // CORNER SNAP LOGIC (50% CHANCE)
+        // ------------------------------------------------------------
+        function maybeSnapToCorner() {
+            if (!cornerToggle.checked) return;
+
+            if (Math.random() < 0.5) {
+                const corner = Math.floor(Math.random() * 4);
+
+                const maxX = window.innerWidth - logo.width;
+                const maxY = window.innerHeight - logo.height;
+
+                switch (corner) {
+                    case 0:
+                        posX = 0;
+                        posY = 0;
+                        break;
+                    case 1:
+                        posX = maxX;
+                        posY = 0;
+                        break;
+                    case 2:
+                        posX = 0;
+                        posY = maxY;
+                        break;
+                    case 3:
+                        posX = maxX;
+                        posY = maxY;
+                        break;
+                }
+
+                logo.style.transform = "scale(1.15)";
+                setTimeout(() => {
+                    logo.style.transform = "scale(1)";
+                }, 150);
+            }
+        }
+
+        // ------------------------------------------------------------
+        // MAIN ANIMATION LOOP
+        // ------------------------------------------------------------
+        function animate() {
+            const now = performance.now();
+            const delta = now - lastFrameTime;
+            frameCount++;
+
+            if (delta >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastFrameTime = now;
+                fpsCounter.textContent = "FPS: " + fps;
+            }
+
+            updateBackgroundGradient(delta);
+
+            const vx = baseSpeedX * speedMultiplier;
+            const vy = baseSpeedY * speedMultiplier;
+
+            if (!isDragging) {
+                posX += vx;
+                posY += vy;
+            }
+
+            const maxX = window.innerWidth - logo.width;
+            const maxY = window.innerHeight - logo.height;
+
+            let bounced = false;
+
+            if (posX <= 0) {
+                posX = 0;
+                baseSpeedX = Math.abs(baseSpeedX);
+                bounced = true;
+            } else if (posX >= maxX) {
+                posX = maxX;
+                baseSpeedX = -Math.abs(baseSpeedX);
+                bounced = true;
+            }
+
+            if (posY <= 0) {
+                posY = 0;
+                baseSpeedY = Math.abs(baseSpeedY);
+                bounced = true;
+            } else if (posY >= maxY) {
+                posY = maxY;
+                baseSpeedY = -Math.abs(baseSpeedY);
+                bounced = true;
+            }
+
+            if (bounced) {
+                maybeSnapToCorner();
+                updateSpeedInfo();
+            }
+
+            logo.style.left = posX + "px";
+            logo.style.top = posY + "px";
+
+            requestAnimationFrame(animate);
+        }
+
+        // ------------------------------------------------------------
+        // WINDOW RESIZE HANDLING
+        // ------------------------------------------------------------
+        window.addEventListener("resize", () => {
+            const maxX = window.innerWidth - logo.width;
+            const maxY = window.innerHeight - logo.height;
+            posX = clamp(posX, 0, maxX);
+            posY = clamp(posY, 0, maxY);
+        });
+
+        // ------------------------------------------------------------
+        // MOUSE-BASED PANEL REVEAL (MACOS-LIKE AUTO-HIDE)
+        // ------------------------------------------------------------
+        window.addEventListener("mousemove", (event) => {
+            lastMouseY = event.clientY;
+            lastMouseMoveTime = performance.now();
+
+            const threshold = window.innerHeight - 40;
+
+            if (event.clientY >= threshold) {
+                setPanelVisible(true);
+                schedulePanelHide();
+            }
+        });
+
+        controlPanelWrapper.addEventListener("mouseenter", () => {
+            if (panelHideTimeout) {
+                clearTimeout(panelHideTimeout);
+                panelHideTimeout = null;
+            }
+        });
+
+        controlPanelWrapper.addEventListener("mouseleave", () => {
+            schedulePanelHide();
+        });
+
+        // ------------------------------------------------------------
+        // TOUCH DRAGGING (MOBILE / TOUCH DEVICES)
+        // ------------------------------------------------------------
+        logo.addEventListener("touchstart", (e) => {
+            if (e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            const rect = logo.getBoundingClientRect();
+            isDragging = true;
+            dragOffsetX = touch.clientX - rect.left;
+            dragOffsetY = touch.clientY - rect.top;
+        });
+
+        window.addEventListener("touchmove", (e) => {
+            if (!isDragging || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            posX = clamp(touch.clientX - dragOffsetX, 0, window.innerWidth - logo.width);
+            posY = clamp(touch.clientY - dragOffsetY, 0, window.innerHeight - logo.height);
+        });
+
+        window.addEventListener("touchend", () => {
+            isDragging = false;
+        });
+
+        // ------------------------------------------------------------
+        // MOUSE DRAGGING (DESKTOP)
+        // ------------------------------------------------------------
+        logo.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            const rect = logo.getBoundingClientRect();
+            isDragging = true;
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+        });
+
+        window.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            posX = clamp(e.clientX - dragOffsetX, 0, window.innerWidth - logo.width);
+            posY = clamp(e.clientY - dragOffsetY, 0, window.innerHeight - logo.height);
+        });
+
+        window.addEventListener("mouseup", () => {
+            isDragging = false;
+        });
+
+        // ------------------------------------------------------------
+        // SLIDER HANDLERS
+        // ------------------------------------------------------------
+        speedSlider.addEventListener("input", () => {
+            speedMultiplier = parseFloat(speedSlider.value);
+            speedSliderValue.textContent = speedMultiplier.toFixed(2) + "x";
+            updateSpeedInfo();
+        });
+
+        sizeSlider.addEventListener("input", () => {
+            const size = parseInt(sizeSlider.value, 10);
+            sizeSliderValue.textContent = size + "px";
+            logo.style.width = size + "px";
+
+            const maxX = window.innerWidth - logo.width;
+            const maxY = window.innerHeight - logo.height;
+            posX = clamp(posX, 0, maxX);
+            posY = clamp(posY, 0, maxY);
+        });
+
+        bgSpeedSlider.addEventListener("input", () => {
+            bgSpeedMultiplier = parseFloat(bgSpeedSlider.value);
+            bgSpeedSliderValue.textContent = bgSpeedMultiplier.toFixed(2) + "x";
+        });
+
+        bgSoftnessSlider.addEventListener("input", () => {
+            bgSoftness = parseFloat(bgSoftnessSlider.value);
+            bgSoftnessSliderValue.textContent = bgSoftness.toFixed(2);
+        });
+
+        cornerToggle.addEventListener("change", () => {
+            updateModeInfo();
+        });
+
+        // ------------------------------------------------------------
+        // INITIALIZATION
+        // ------------------------------------------------------------
+        logo.onload = () => {
+            const size = parseInt(sizeSlider.value, 10);
+            logo.style.width = size + "px";
+
+            const maxX = window.innerWidth - logo.width;
+            const maxY = window.innerHeight - logo.height;
+
+            posX = clamp(posX, 0, maxX);
+            posY = clamp(posY, 0, maxY);
+
+            updateSpeedInfo();
+            updateModeInfo();
+
+            setPanelVisible(false);
+
+            requestAnimationFrame(animate);
+        };
+    </script>
 </body>
 </html>
