@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Bouncing Logo</title>
+
+<style>
+    /* ------------------------------
+       GLOBAL PAGE STYLES
+       ------------------------------ */
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: black;
+        font-family: Arial, sans-serif;
+        user-select: none;
+    }
+
+    /* ------------------------------
+       BOUNCING LOGO IMAGE
+       ------------------------------ */
+    #bouncingLogo {
+        position: absolute;
+        width: 160px;
+        height: auto;
+        pointer-events: none;
+        transition: transform 0.15s ease-out;
+    }
+
+    /* ------------------------------
+       CONTROL PANEL
+       ------------------------------ */
+    #controlPanel {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.6);
+        padding: 12px 16px;
+        border-radius: 8px;
+        color: white;
+        font-size: 14px;
+        z-index: 9999;
+        backdrop-filter: blur(4px);
+    }
+
+    #controlPanel label {
+        cursor: pointer;
+    }
+
+    #fpsCounter {
+        margin-top: 6px;
+        font-size: 12px;
+        opacity: 0.8;
+    }
+</style>
+
+</head>
+<body>
+
+<!-- --------------------------------
+     CONTROL PANEL UI
+     -------------------------------- -->
+<div id="controlPanel">
+    <label>
+        <input type="checkbox" id="cornerToggle">
+        Enable 50% Corner Snap
+    </label>
+    <div id="fpsCounter">FPS: --</div>
+</div>
+
+<!-- --------------------------------
+     LOGO IMAGE
+     -------------------------------- -->
+<img src="logo.png" id="bouncingLogo" alt="Logo">
+
+<script>
+/* ============================================================
+   ADVANCED BOUNCING LOGO ENGINE
+   ============================================================ */
+
+const logo = document.getElementById("bouncingLogo");
+const cornerToggle = document.getElementById("cornerToggle");
+const fpsCounter = document.getElementById("fpsCounter");
+
+/* ------------------------------
+   INITIAL POSITION & SPEED
+   ------------------------------ */
+let posX = 100;
+let posY = 100;
+
+let speedX = (Math.random() * 3 + 2) * (Math.random() < 0.5 ? -1 : 1);
+let speedY = (Math.random() * 3 + 2) * (Math.random() < 0.5 ? -1 : 1);
+
+let lastFrameTime = performance.now();
+let frameCount = 0;
+let fps = 0;
+
+/* ------------------------------
+   BACKGROUND COLOR CYCLING
+   ------------------------------ */
+let hue = 0;
+function cycleBackground() {
+    hue = (hue + 0.15) % 360;
+    document.body.style.backgroundColor = `hsl(${hue}, 40%, 10%)`;
+}
+
+/* ------------------------------
+   CORNER SNAP LOGIC (50% chance)
+   ------------------------------ */
+function maybeSnapToCorner() {
+    if (!cornerToggle.checked) return;
+
+    if (Math.random() < 0.5) {
+        const corner = Math.floor(Math.random() * 4);
+
+        switch (corner) {
+            case 0: posX = 0; posY = 0; break;
+            case 1: posX = window.innerWidth - logo.width; posY = 0; break;
+            case 2: posX = 0; posY = window.innerHeight - logo.height; break;
+            case 3: posX = window.innerWidth - logo.width; posY = window.innerHeight - logo.height; break;
+        }
+
+        logo.style.transform = "scale(1.15)";
+        setTimeout(() => logo.style.transform = "scale(1)", 150);
+    }
+}
+
+/* ------------------------------
+   MAIN ANIMATION LOOP
+   ------------------------------ */
+function animate() {
+    const now = performance.now();
+    const delta = now - lastFrameTime;
+    frameCount++;
+
+    if (delta >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastFrameTime = now;
+        fpsCounter.textContent = "FPS: " + fps;
+    }
+
+    cycleBackground();
+
+    posX += speedX;
+    posY += speedY;
+
+    const maxX = window.innerWidth - logo.width;
+    const maxY = window.innerHeight - logo.height;
+
+    let bounced = false;
+
+    if (posX <= 0 || posX >= maxX) {
+        speedX *= -1;
+        bounced = true;
+    }
+    if (posY <= 0 || posY >= maxY) {
+        speedY *= -1;
+        bounced = true;
+    }
+
+    if (bounced) {
+        maybeSnapToCorner();
+    }
+
+    logo.style.left = posX + "px";
+    logo.style.top = posY + "px";
+
+    requestAnimationFrame(animate);
+}
+
+/* ------------------------------
+   WINDOW RESIZE HANDLING
+   ------------------------------ */
+window.addEventListener("resize", () => {
+    posX = Math.min(posX, window.innerWidth - logo.width);
+    posY = Math.min(posY, window.innerHeight - logo.height);
+});
+
+/* ------------------------------
+   TOUCH DRAGGING (MOBILE)
+   ------------------------------ */
+let dragging = false;
+
+logo.addEventListener("touchstart", (e) => {
+    dragging = true;
+});
+
+window.addEventListener("touchmove", (e) => {
+    if (!dragging) return;
+    const touch = e.touches[0];
+    posX = touch.clientX - logo.width / 2;
+    posY = touch.clientY - logo.height / 2;
+});
+
+window.addEventListener("touchend", () => {
+    dragging = false;
+});
+
+/* ------------------------------
+   START WHEN IMAGE LOADS
+   ------------------------------ */
+logo.onload = () => {
+    animate();
+};
+
+</script>
+
+</body>
+</html>
